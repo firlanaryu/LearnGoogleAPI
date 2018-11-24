@@ -6,23 +6,17 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.os.Handler;
-import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.creaginetech.learngoogleapi.network.AppUtils;
-import com.creaginetech.learngoogleapi.network.FetchAddressIntentService;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -35,7 +29,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -74,16 +67,6 @@ public class OjekActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Button btnNext, btnMap;
     private LinearLayout infoPanel;
     private TextView tvPickUpFrom;
-
-    protected String mAddressOutput;
-    protected String mAreaOutput;
-    protected String mCityOutput;
-    protected String mSreetOutput;
-    EditText mLocationAddress;
-    TextView mLocationMarkerText;
-    private static String TAG = "MAP LOCATION";
-    private MapsActivity.AddressResultReceiver mResultReceiver;
-
 //    private TextView tvDestLocation;
 
     public static final int PICK_UP = 0;
@@ -150,22 +133,6 @@ public class OjekActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
-
-        mLocationMarkerText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                Intent intent = new Intent(OjekActivity.this, DirectionActivity.class);
-
-                intent.putExtra("pickuplatlng", pickUpLatLng);
-
-                startActivity(intent);
-
-            }
-        });
-
-
-
     }
 
     // Method untuk Inisilisasi Widget agar lebih rapih
@@ -184,9 +151,6 @@ public class OjekActivity extends AppCompatActivity implements OnMapReadyCallbac
         tvDistance = findViewById(R.id.tvDistance);
         btnNext = findViewById(R.id.btnNext);
         btnMap = findViewById(R.id.buttonSelectMap);
-        mLocationAddress = (EditText) findViewById(R.id.Address);
-        mLocationMarkerText = (TextView) findViewById(R.id.locationMarkertext);
-
     }
 
     // Method menampilkan input Place Auto Complete
@@ -277,51 +241,6 @@ public class OjekActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.getUiSettings().setZoomGesturesEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(false);
         mMap.getUiSettings().setZoomControlsEnabled(true);
-
-        Log.d(TAG, "OnMapReady");
-        mMap = googleMap;
-
-        mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
-            @Override
-            public void onCameraChange(CameraPosition cameraPosition) {
-                Log.d("Camera postion change" + "", cameraPosition + "");
-                pickUpLatLng = cameraPosition.target;
-
-
-                mMap.clear();
-
-                try {
-
-                    Location mLocation = new Location("");
-                    mLocation.setLatitude(pickUpLatLng.latitude);
-                    mLocation.setLongitude(pickUpLatLng.longitude);
-
-                    startIntentService(mLocation);
-//                    mLocationMarkerText.setText("Lat : " + mCenterLatLong.latitude + "," + "Long : " + mCenterLatLong.longitude);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-//        mMap.setMyLocationEnabled(true);
-//        mMap.getUiSettings().setMyLocationButtonEnabled(true);
-//
-//        // Add a marker in Sydney and move the camera
-//        LatLng sydney = new LatLng(-34, 151);
-//        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-
     }
 
     //method menggambar route
@@ -432,75 +351,6 @@ public class OjekActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (SecurityException e) {
             Log.e("Exception: %s", e.getMessage());
         }
-    }
-
-
-    /**
-     * Receiver for data sent from FetchAddressIntentService.
-     */
-    class AddressResultReceiver extends ResultReceiver {
-        public AddressResultReceiver(Handler handler) {
-            super(handler);
-        }
-
-        /**
-         * Receives data sent from FetchAddressIntentService and updates the UI in MainActivity.
-         */
-        @Override
-        protected void onReceiveResult(int resultCode, Bundle resultData) {
-
-            // Display the address string or an error message sent from the intent service.
-            mAddressOutput = resultData.getString(AppUtils.LocationConstants.RESULT_DATA_KEY);
-
-            mAreaOutput = resultData.getString(AppUtils.LocationConstants.LOCATION_DATA_AREA);
-
-            mCityOutput = resultData.getString(AppUtils.LocationConstants.LOCATION_DATA_CITY);
-            mSreetOutput = resultData.getString(AppUtils.LocationConstants.LOCATION_DATA_STREET);
-
-            displayAddressOutput();
-
-            // Show a toast message if an address was found.
-            if (resultCode == AppUtils.LocationConstants.SUCCESS_RESULT) {
-                //  showToast(getString(R.string.address_found));
-
-
-            }
-
-
-        }
-
-    }
-
-    /**
-     * Updates the address in the UI.
-     */
-    protected void displayAddressOutput() {
-        //  mLocationAddressTextView.setText(mAddressOutput);
-        try {
-            if (mAreaOutput != null)
-                // mLocationText.setText(mAreaOutput+ "");
-
-                mLocationAddress.setText(mSreetOutput);
-            //mLocationText.setText(mAreaOutput);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    protected void startIntentService(Location mLocation) {
-        // Create an intent for passing to the intent service responsible for fetching the address.
-        Intent intent = new Intent(this, FetchAddressIntentService.class);
-
-        // Pass the result receiver as an extra to the service.
-        intent.putExtra(AppUtils.LocationConstants.RECEIVER, mResultReceiver);
-
-        // Pass the location data as an extra to the service.
-        intent.putExtra(AppUtils.LocationConstants.LOCATION_DATA_EXTRA, mLocation);
-
-        // Start the service. If the service isn't already running, it is instantiated and started
-        // (creating a process for it if needed); if it is running then it remains running. The
-        // service kills itself automatically once all intents are processed.
-        startService(intent);
     }
 
 }
